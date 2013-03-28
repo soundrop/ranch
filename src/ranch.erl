@@ -123,9 +123,23 @@ child_spec(Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts)
 %%
 %% Effectively used to make sure the socket control has been given to
 %% the protocol process before starting to use it.
+%%
+%% Equivalent to accept_ack(Ref, infinity).
 -spec accept_ack(any()) -> ok.
 accept_ack(Ref) ->
-	receive {shoot, Ref} -> ok end.
+	accept_ack(Ref, infinity).
+
+%% @doc Acknowledge the accepted connection.
+%%
+%% Effectively used to make sure the socket control has been given to
+%% the protocol process before starting to use it. It also carries out
+%% any handshaking, if required, within <em>Timeout</em> or exits.
+-spec accept_ack(any(), timeout()) -> ok.
+accept_ack(Ref, Timeout) ->
+	receive
+		{shoot, Ref, undefined} -> ok;
+		{shoot, Ref, HandshakeFun} -> ok = HandshakeFun(Timeout)
+	end.
 
 %% @doc Remove the calling process' connection from the pool.
 %%

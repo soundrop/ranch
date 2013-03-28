@@ -39,6 +39,8 @@
 -export([sockname/1]).
 -export([close/1]).
 
+-type handshake_fun() :: fun((timeout()) -> ok | {error, {ssl_accept, atom()}}).
+
 %% @doc Name of this transport, <em>ssl</em>.
 name() -> ssl.
 
@@ -118,11 +120,12 @@ listen(Opts) ->
 %% @see ssl:transport_accept/2
 %% @see ssl:ssl_accept/2
 -spec accept(ssl:sslsocket(), timeout())
-	-> {ok, ssl:sslsocket()} | {error, closed | timeout | atom() | tuple()}.
+    -> {ok, ssl:sslsocket(), handshake_fun()}
+	| {error, closed | timeout | atom() | tuple()}.
 accept(LSocket, Timeout) ->
 	case ssl:transport_accept(LSocket, Timeout) of
 		{ok, CSocket} ->
-			ssl_accept(CSocket, Timeout);
+			{ok, CSocket, fun(Timeout2) -> ssl_accept(CSocket, Timeout2) end};
 		{error, Reason} ->
 			{error, Reason}
 	end.
@@ -219,11 +222,11 @@ close(Socket) ->
 %% Internal.
 
 -spec ssl_accept(ssl:sslsocket(), timeout())
-	-> {ok, ssl:sslsocket()} | {error, {ssl_accept, atom()}}.
+	-> ok | {error, {ssl_accept, atom()}}.
 ssl_accept(Socket, Timeout) ->
 	case ssl:ssl_accept(Socket, Timeout) of
 		ok ->
-			{ok, Socket};
+			ok;
 		{error, Reason} ->
 			{error, {ssl_accept, Reason}}
 	end.

@@ -35,12 +35,22 @@ start_link(LSocket, Transport, ConnsSup) ->
 loop(LSocket, Transport, ConnsSup) ->
 	_ = case Transport:accept(LSocket, infinity) of
 		{ok, CSocket} ->
-			Transport:controlling_process(CSocket, ConnsSup),
-			%% This call will not return until process has been started
-			%% AND we are below the maximum number of connections.
-			ranch_conns_sup:start_protocol(ConnsSup, CSocket);
+			start_protocol(Transport, ConnsSup, CSocket, undefined);
+		{ok, CSocket, HandshakeFun} ->
+			start_protocol(Transport, ConnsSup, CSocket, HandshakeFun);
 		%% We want to crash if the listening socket got closed.
 		{error, Reason} when Reason =/= closed ->
 			ok
 	end,
 	?MODULE:loop(LSocket, Transport, ConnsSup).
+
+%% internal
+
+-spec start_protocol(module(), pid(), inet:socket(),
+		undefined | fun((timeout()) -> ok))
+	-> {ok, pid()} | {error, term()}.
+start_protocol(Transport, ConnsSup, CSocket, HandshakeFun) ->
+	Transport:controlling_process(CSocket, ConnsSup),
+	%% This call will not return until process has been started
+	%% AND we are below the maximum number of connections.
+	ranch_conns_sup:start_protocol(ConnsSup, CSocket, HandshakeFun).
