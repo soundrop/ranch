@@ -19,6 +19,7 @@
 -export([stop_listener/1]).
 -export([child_spec/6]).
 -export([accept_ack/1]).
+-export([accept_ack/2]).
 -export([remove_connection/1]).
 -export([get_port/1]).
 -export([get_max_connections/1]).
@@ -125,7 +126,7 @@ child_spec(Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts)
 %% the protocol process before starting to use it.
 %%
 %% Equivalent to accept_ack(Ref, infinity).
--spec accept_ack(any()) -> ok.
+-spec accept_ack(any()) -> ok | {error, term()}.
 accept_ack(Ref) ->
 	accept_ack(Ref, infinity).
 
@@ -134,11 +135,11 @@ accept_ack(Ref) ->
 %% Effectively used to make sure the socket control has been given to
 %% the protocol process before starting to use it. It also carries out
 %% any handshaking, if required, within <em>Timeout</em> or exits.
--spec accept_ack(any(), timeout()) -> ok.
+-spec accept_ack(any(), timeout()) -> ok | {error, term()}.
 accept_ack(Ref, Timeout) ->
 	receive
 		{shoot, Ref, undefined} -> ok;
-		{shoot, Ref, HandshakeFun} -> ok = HandshakeFun(Timeout)
+		{shoot, Ref, HandshakeFun} -> HandshakeFun(Timeout)
 	end.
 
 %% @doc Remove the calling process' connection from the pool.
